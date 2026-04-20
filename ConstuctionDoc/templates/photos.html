@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Фотофиксация - СтройДок</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container">
+            <span class="navbar-brand"><i class="bi bi-camera"></i> Фотофиксация: {{ site.name }}</span>
+            <a href="/" class="btn btn-outline-light">На главную</a>
+        </div>
+    </nav>
+
+    <div class="container mt-3">
+        <div class="row">
+            <div class="col-12">
+                <button class="btn btn-success mb-3" onclick="takePhoto()">
+                    <i class="bi bi-camera"></i> Сделать фото
+                </button>
+            </div>
+        </div>
+
+        <div class="row">
+            {% for photo in photos %}
+            <div class="col-md-4 col-6 mb-3">
+                <div class="card">
+                    <img src="/uploads/{{ photo.photo_path.split('/')[-1] }}" class="card-img-top" style="height: 200px; object-fit: cover;">
+                    <div class="card-body">
+                        <p class="small text-muted">
+                            <i class="bi bi-calendar"></i> {{ photo.timestamp }}<br>
+                            <i class="bi bi-geo-alt"></i> {{ photo.latitude }}, {{ photo.longitude }}
+                        </p>
+                        <p>{{ photo.description }}</p>
+                        <a href="/photo/delete/{{ photo.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Удалить?')">
+                            <i class="bi bi-trash"></i> Удалить
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12">
+                <div class="alert alert-info">Нет фотографий. Нажмите "Сделать фото"</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        function takePhoto() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // Создаём input для выбора файла (камера на телефоне)
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.capture = 'environment';  // Задняя камера
+                    
+                    input.onchange = function(e) {
+                        const file = e.target.files[0];
+                        const reader = new FileReader();
+                        
+                        reader.onloadend = function() {
+                            const description = prompt('Введите описание фото:', '');
+                            
+                            fetch('/photo/add', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    photo: reader.result,
+                                    site_id: {{ site.id }},
+                                    latitude: lat,
+                                    longitude: lng,
+                                    description: description,
+                                    section: '{{ section }}'
+                                })
+                            }).then(() => {
+                                location.reload();
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    };
+                    input.click();
+                });
+            } else {
+                alert('Геолокация недоступна');
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
